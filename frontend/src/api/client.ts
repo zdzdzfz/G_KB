@@ -78,10 +78,11 @@ export const api = {
   async deleteMailbox(id: number) {
     await apiClient.delete(`/mailboxes/${id}`)
   },
-  async messages(mailboxId: number, filters: MessageFilters) {
+  async messages(mailboxId: number, filters: MessageFilters, signal?: AbortSignal) {
     return (
       await apiClient.get<{ data: EmailMessage[] }>(`/mailboxes/${mailboxId}/messages`, {
         params: Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== '')),
+        signal,
       })
     ).data.data
   },

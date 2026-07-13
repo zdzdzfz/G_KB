@@ -32,6 +32,7 @@ export function DashboardPage() {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [draggingMailboxId, setDraggingMailboxId] = useState<number | null>(null)
   const [mailboxOrder, setMailboxOrder] = useState<number[]>(readStoredMailboxOrder)
+  const debouncedFilters = useDebouncedValue(filters, 300)
 
   const mailboxesQuery = useQuery({ queryKey: ['mailboxes'], queryFn: api.mailboxes })
   const statsQuery = useQuery({ queryKey: ['dashboard', 'stats'], queryFn: api.stats })
@@ -69,6 +70,10 @@ export function DashboardPage() {
     setPagination((current) => ({ ...current, [mailboxId]: page }))
   }, [])
 
+  useEffect(() => {
+    setPagination({})
+  }, [debouncedFilters])
+
   const moveMailbox = useCallback(
     (draggedId: number, targetId: number) => {
       if (draggedId === targetId) return
@@ -104,8 +109,8 @@ export function DashboardPage() {
     const messageGroups = await Promise.all(
       orderedMailboxes.map((mailbox) =>
         queryClient.fetchQuery({
-          queryKey: ['messages', mailbox.id, filters],
-          queryFn: () => api.messages(mailbox.id, filters),
+          queryKey: ['messages', mailbox.id, debouncedFilters],
+          queryFn: () => api.messages(mailbox.id, debouncedFilters),
         }),
       ),
     )
@@ -215,7 +220,7 @@ export function DashboardPage() {
           <MailboxSection
             key={mailbox.id}
             mailbox={mailbox}
-            filters={filters}
+            filters={debouncedFilters}
             page={pagination[mailbox.id] ?? 1}
             onPageChange={updatePage}
             onOpenMessage={setSelectedMessage}
@@ -355,6 +360,17 @@ function orderMailboxes<T extends { id: number }>(mailboxes: T[], order: number[
 
 function sameNumberArray(first: number[], second: number[]) {
   return first.length === second.length && first.every((value, index) => value === second[index])
+}
+
+function useDebouncedValue<T>(value: T, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedValue(value), delay)
+    return () => window.clearTimeout(timeout)
+  }, [delay, value])
+
+  return debouncedValue
 }
 
 type CopyField = 'domain' | 'ip'

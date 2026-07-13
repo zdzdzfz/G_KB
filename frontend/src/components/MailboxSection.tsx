@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type DragEvent } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Copy, GripVertical, Mail, MoreHorizontal, Pause, Play, RefreshCcw, Trash2 } from 'lucide-react'
 import { api } from '../api/client'
 import { StatusBadge } from './Badges'
@@ -36,8 +36,10 @@ export function MailboxSection({
 
   const messagesQuery = useQuery({
     queryKey: ['messages', mailbox.id, filters],
-    queryFn: () => api.messages(mailbox.id, filters),
+    queryFn: ({ signal }) => api.messages(mailbox.id, filters, signal),
     enabled: mailbox.status !== 'reconnect_required',
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   })
 
   const syncMutation = useMailboxMutation((id) => api.syncMailbox(id))

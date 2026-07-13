@@ -122,6 +122,25 @@ export async function migrate() {
         expires_at TEXT NOT NULL,
         created_at TEXT NOT NULL
       );
+
+      CREATE INDEX IF NOT EXISTS idx_google_mailboxes_user_id
+        ON google_mailboxes(user_id);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_received
+        ON email_messages(google_mailbox_id, received_at DESC, id DESC);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_placement
+        ON email_messages(google_mailbox_id, placement);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_category
+        ON email_messages(google_mailbox_id, gmail_category);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_spf
+        ON email_messages(google_mailbox_id, spf_result);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_dkim
+        ON email_messages(google_mailbox_id, dkim_result);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_dmarc
+        ON email_messages(google_mailbox_id, dmarc_result);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_from_domain
+        ON email_messages(google_mailbox_id, from_domain);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_sending_ip
+        ON email_messages(google_mailbox_id, observed_sending_ip);
     `)
   } else {
     sqlite.exec(`
@@ -226,6 +245,25 @@ export async function migrate() {
         expires_at TEXT NOT NULL,
         created_at TEXT NOT NULL
       );
+
+      CREATE INDEX IF NOT EXISTS idx_google_mailboxes_user_id
+        ON google_mailboxes(user_id);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_received
+        ON email_messages(google_mailbox_id, received_at DESC, id DESC);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_placement
+        ON email_messages(google_mailbox_id, placement);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_category
+        ON email_messages(google_mailbox_id, gmail_category);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_spf
+        ON email_messages(google_mailbox_id, spf_result);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_dkim
+        ON email_messages(google_mailbox_id, dkim_result);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_dmarc
+        ON email_messages(google_mailbox_id, dmarc_result);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_from_domain
+        ON email_messages(google_mailbox_id, from_domain);
+      CREATE INDEX IF NOT EXISTS idx_email_messages_mailbox_sending_ip
+        ON email_messages(google_mailbox_id, observed_sending_ip);
     `)
   }
 
