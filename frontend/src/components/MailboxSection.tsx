@@ -125,30 +125,30 @@ export function MailboxSection({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <TextButton onClick={() => syncMutation.mutate(mailbox.id)} disabled={isBusy || mailbox.status === 'paused'}>
+        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-slate-50/80 p-1 shadow-sm">
+          <TextButton variant="toolbar" onClick={() => syncMutation.mutate(mailbox.id)} disabled={isBusy || mailbox.status === 'paused'}>
             <RefreshCcw className="h-3.5 w-3.5" />
             Refresh
           </TextButton>
-          <TextButton onClick={() => copyMailboxValues('domain')} disabled={mailboxDomains.length === 0}>
+          <TextButton variant="toolbar" onClick={() => copyMailboxValues('domain')} disabled={mailboxDomains.length === 0}>
             <Copy className="h-3.5 w-3.5" />
             Domains
           </TextButton>
-          <TextButton onClick={() => copyMailboxValues('ip')} disabled={mailboxIps.length === 0}>
+          <TextButton variant="toolbar" onClick={() => copyMailboxValues('ip')} disabled={mailboxIps.length === 0}>
             <Copy className="h-3.5 w-3.5" />
             IPs
           </TextButton>
           {mailbox.status === 'paused' ? (
-            <IconButton onClick={() => resumeMutation.mutate(mailbox.id)} disabled={isBusy} title="Resume">
+            <IconButton variant="toolbar" onClick={() => resumeMutation.mutate(mailbox.id)} disabled={isBusy} title="Resume">
               <Play className="h-4 w-4" />
             </IconButton>
           ) : (
-            <IconButton onClick={() => pauseMutation.mutate(mailbox.id)} disabled={isBusy} title="Pause">
+            <IconButton variant="toolbar" onClick={() => pauseMutation.mutate(mailbox.id)} disabled={isBusy} title="Pause">
               <Pause className="h-4 w-4" />
             </IconButton>
           )}
           <div className="relative">
-            <IconButton onClick={() => setMenuOpen((open) => !open)} title="More">
+            <IconButton variant="toolbar" onClick={() => setMenuOpen((open) => !open)} title="More">
               <MoreHorizontal className="h-4 w-4" />
             </IconButton>
             {menuOpen && (

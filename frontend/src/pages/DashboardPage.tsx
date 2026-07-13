@@ -196,19 +196,21 @@ export function DashboardPage() {
         </section>
       )}
 
-      <div className="mb-3 flex flex-wrap items-center justify-end gap-1.5">
-        <TextButton onClick={() => syncAllMutation.mutate()} disabled={syncAllMutation.isPending || orderedMailboxes.length === 0}>
-          <RefreshCcw className="h-3.5 w-3.5" />
-          Refresh All
-        </TextButton>
-        <TextButton onClick={() => copyAllValues('domain')} disabled={orderedMailboxes.length === 0}>
-          <Copy className="h-3.5 w-3.5" />
-          All Domains
-        </TextButton>
-        <TextButton onClick={() => copyAllValues('ip')} disabled={orderedMailboxes.length === 0}>
-          <Copy className="h-3.5 w-3.5" />
-          All IPs
-        </TextButton>
+      <div className="mb-3 flex justify-end">
+        <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-slate-50/80 p-1 shadow-sm">
+          <TextButton variant="toolbar" onClick={() => syncAllMutation.mutate()} disabled={syncAllMutation.isPending || orderedMailboxes.length === 0}>
+            <RefreshCcw className="h-3.5 w-3.5" />
+            Refresh All
+          </TextButton>
+          <TextButton variant="toolbar" onClick={() => copyAllValues('domain')} disabled={orderedMailboxes.length === 0}>
+            <Copy className="h-3.5 w-3.5" />
+            All Domains
+          </TextButton>
+          <TextButton variant="toolbar" onClick={() => copyAllValues('ip')} disabled={orderedMailboxes.length === 0}>
+            <Copy className="h-3.5 w-3.5" />
+            All IPs
+          </TextButton>
+        </div>
       </div>
 
       <div className="space-y-5">
