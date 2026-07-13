@@ -125,31 +125,31 @@ export function MailboxSection({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-0.5 rounded-xl border border-slate-900/10 bg-slate-900 p-1 shadow-md shadow-slate-900/10">
+        <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-emerald-100 bg-emerald-50/70 p-0.5 shadow-sm">
           <TextButton variant="toolbarPrimary" onClick={() => syncMutation.mutate(mailbox.id)} disabled={isBusy || mailbox.status === 'paused'}>
-            <RefreshCcw className="h-3.5 w-3.5" />
+            <RefreshCcw className="h-3 w-3" />
             Refresh
           </TextButton>
           <TextButton variant="toolbar" onClick={() => copyMailboxValues('domain')} disabled={mailboxDomains.length === 0}>
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="h-3 w-3" />
             Domains
           </TextButton>
           <TextButton variant="toolbar" onClick={() => copyMailboxValues('ip')} disabled={mailboxIps.length === 0}>
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="h-3 w-3" />
             IPs
           </TextButton>
           {mailbox.status === 'paused' ? (
             <IconButton variant="toolbar" onClick={() => resumeMutation.mutate(mailbox.id)} disabled={isBusy} title="Resume">
-              <Play className="h-4 w-4" />
+              <Play className="h-3.5 w-3.5" />
             </IconButton>
           ) : (
             <IconButton variant="toolbar" onClick={() => pauseMutation.mutate(mailbox.id)} disabled={isBusy} title="Pause">
-              <Pause className="h-4 w-4" />
+              <Pause className="h-3.5 w-3.5" />
             </IconButton>
           )}
           <div className="relative">
             <IconButton variant="toolbar" onClick={() => setMenuOpen((open) => !open)} title="More">
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="h-3.5 w-3.5" />
             </IconButton>
             {menuOpen && (
               <div className="absolute right-0 top-11 z-20 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">

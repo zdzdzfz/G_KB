@@ -21,7 +21,7 @@ export function MessageCard({ message, onOpen }: { message: EmailMessage; onOpen
       <div className="mb-1.5 flex items-start justify-between gap-1.5">
         <div className="flex min-w-0 flex-col items-start gap-1">
           <PlacementBadge placement={message.placement} compact />
-          {message.gmail_category && (
+          {message.placement !== 'spam' && message.gmail_category && (
             <span className="max-w-full truncate rounded-md bg-indigo-50 px-1.5 py-0.5 text-[9px] font-medium leading-3 text-indigo-700 ring-1 ring-indigo-200">
               {message.gmail_category}
             </span>
