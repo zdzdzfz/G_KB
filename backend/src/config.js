@@ -3,8 +3,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase()
-const adminPassword = process.env.ADMIN_PASSWORD || ''
+const adminEmail = stripWrappingQuotes(process.env.ADMIN_EMAIL || '').trim().toLowerCase()
+const adminPassword = stripWrappingQuotes(process.env.ADMIN_PASSWORD || '')
 
 export const config = {
   rootDir,
@@ -29,4 +29,12 @@ export const config = {
     messageLimit: Number(process.env.GMAIL_MESSAGE_LIMIT || 25),
     syncCooldownSeconds: Number(process.env.GMAIL_SYNC_COOLDOWN_SECONDS || 60),
   },
+}
+
+function stripWrappingQuotes(value) {
+  const text = String(value)
+  if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'"))) {
+    return text.slice(1, -1)
+  }
+  return text
 }
