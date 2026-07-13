@@ -83,13 +83,14 @@ GMAIL_MESSAGE_LIMIT=25
 GMAIL_SYNC_COOLDOWN_SECONDS=60
 ```
 
-Use the Supabase Postgres connection string, preferably the transaction pooler URI for Vercel/serverless. After deploy, add the exact `GOOGLE_REDIRECT_URI` above to Google Cloud OAuth authorized redirect URIs.
+You can also copy the safe template from `.env.example` into Vercel's Environment Variables page and replace the placeholder values. Use the Supabase Postgres connection string, preferably the transaction pooler URI for Vercel/serverless. After deploy, add the exact `GOOGLE_REDIRECT_URI` above to Google Cloud OAuth authorized redirect URIs.
 
 ## GitHub Checklist
 
 Before pushing, keep these files local only:
 
 - `backend/.env`
+- `.env` with real secret values
 - any `node_modules/` folder
 - `frontend/dist/`
 - `backend/database/`
