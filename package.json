@@ -1,0 +1,16 @@
+{
+  "name": "mailauth-monitor",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm --prefix backend install && npm --prefix frontend install && npm --prefix frontend run build",
+    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "test": "npm --prefix backend test && npm --prefix frontend run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

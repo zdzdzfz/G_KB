@@ -1,0 +1,41 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build output
+dist/
+frontend/dist/
+backend/dist/
+
+# Runtime data
+backend/database/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.zed/
+
+# Legacy/generated local files
+backend/vendor/
+backend/storage/
+backend/.phpunit.result.cache
