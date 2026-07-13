@@ -197,18 +197,19 @@ export function DashboardPage() {
       )}
 
       <div className="mb-3 flex justify-end">
-        <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-slate-50/80 p-1 shadow-sm">
-          <TextButton variant="toolbar" onClick={() => syncAllMutation.mutate()} disabled={syncAllMutation.isPending || orderedMailboxes.length === 0}>
+        <div className="inline-flex flex-wrap items-center gap-0.5 rounded-xl border border-slate-900/10 bg-slate-900 p-1 shadow-md shadow-slate-900/10">
+          <span className="px-1.5 text-[10px] font-semibold uppercase tracking-normal text-slate-400">All</span>
+          <TextButton variant="toolbarPrimary" title="Refresh all mailboxes" onClick={() => syncAllMutation.mutate()} disabled={syncAllMutation.isPending || orderedMailboxes.length === 0}>
             <RefreshCcw className="h-3.5 w-3.5" />
-            Refresh All
+            Refresh
           </TextButton>
-          <TextButton variant="toolbar" onClick={() => copyAllValues('domain')} disabled={orderedMailboxes.length === 0}>
+          <TextButton variant="toolbar" title="Copy all domains" onClick={() => copyAllValues('domain')} disabled={orderedMailboxes.length === 0}>
             <Copy className="h-3.5 w-3.5" />
-            All Domains
+            Domains
           </TextButton>
-          <TextButton variant="toolbar" onClick={() => copyAllValues('ip')} disabled={orderedMailboxes.length === 0}>
+          <TextButton variant="toolbar" title="Copy all IPs" onClick={() => copyAllValues('ip')} disabled={orderedMailboxes.length === 0}>
             <Copy className="h-3.5 w-3.5" />
-            All IPs
+            IPs
           </TextButton>
         </div>
       </div>

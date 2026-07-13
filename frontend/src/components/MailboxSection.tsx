@@ -125,8 +125,8 @@ export function MailboxSection({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-slate-50/80 p-1 shadow-sm">
-          <TextButton variant="toolbar" onClick={() => syncMutation.mutate(mailbox.id)} disabled={isBusy || mailbox.status === 'paused'}>
+        <div className="flex flex-wrap items-center gap-0.5 rounded-xl border border-slate-900/10 bg-slate-900 p-1 shadow-md shadow-slate-900/10">
+          <TextButton variant="toolbarPrimary" onClick={() => syncMutation.mutate(mailbox.id)} disabled={isBusy || mailbox.status === 'paused'}>
             <RefreshCcw className="h-3.5 w-3.5" />
             Refresh
           </TextButton>
