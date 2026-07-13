@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, Copy, Link, RefreshCcw, X } from 'lucide-react'
+import { Copy, Link, RefreshCcw, X } from 'lucide-react'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { FiltersBar } from '../components/FiltersBar'
@@ -20,6 +20,8 @@ const initialFilters: MessageFilters = {
   date_to: '',
 }
 
+const mailboxOrderStorageKey = 'mailauth_mailbox_order'
+
 export function DashboardPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -28,6 +30,8 @@ export function DashboardPage() {
   const [pagination, setPagination] = useState<Record<number, number>>({})
   const [selectedMessage, setSelectedMessage] = useState<EmailMessage | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [draggingMailboxId, setDraggingMailboxId] = useState<number | null>(null)
+  const [mailboxOrder, setMailboxOrder] = useState<number[]>(readStoredMailboxOrder)
 
   const mailboxesQuery = useQuery({ queryKey: ['mailboxes'], queryFn: api.mailboxes })
   const statsQuery = useQuery({ queryKey: ['dashboard', 'stats'], queryFn: api.stats })
@@ -43,69 +47,102 @@ export function DashboardPage() {
   })
 
   const mailboxes = mailboxesQuery.data ?? []
+  const orderedMailboxes = useMemo(() => orderMailboxes(mailboxes, mailboxOrder), [mailboxes, mailboxOrder])
   const visibleMailboxes = useMemo(
-    () => (activeMailboxId === 'all' ? mailboxes : mailboxes.filter((mailbox) => mailbox.id === activeMailboxId)),
-    [activeMailboxId, mailboxes],
+    () => (activeMailboxId === 'all' ? orderedMailboxes : orderedMailboxes.filter((mailbox) => mailbox.id === activeMailboxId)),
+    [activeMailboxId, orderedMailboxes],
   )
+
+  const saveMailboxOrder = useCallback((order: number[]) => {
+    setMailboxOrder(order)
+    writeStoredMailboxOrder(order)
+  }, [])
+
+  useEffect(() => {
+    const normalized = normalizeMailboxOrder(mailboxOrder, mailboxes.map((mailbox) => mailbox.id))
+    if (!sameNumberArray(normalized, mailboxOrder)) {
+      saveMailboxOrder(normalized)
+    }
+  }, [mailboxOrder, mailboxes, saveMailboxOrder])
 
   const updatePage = useCallback((mailboxId: number, page: number) => {
     setPagination((current) => ({ ...current, [mailboxId]: page }))
   }, [])
 
-  function copyAllDomains() {
-    const messageQueries = queryClient.getQueriesData<EmailMessage[]>({ queryKey: ['messages'] })
-    const domains = Array.from(
-      new Set(
-        messageQueries
-          .flatMap(([, data]) => data ?? [])
-          .map((message) => message.from_domain)
-          .filter(Boolean) as string[],
+  const moveMailbox = useCallback(
+    (draggedId: number, targetId: number) => {
+      if (draggedId === targetId) return
+
+      const ids = orderedMailboxes.map((mailbox) => mailbox.id)
+      const fromIndex = ids.indexOf(draggedId)
+      const toIndex = ids.indexOf(targetId)
+
+      if (fromIndex === -1 || toIndex === -1) return
+
+      const nextOrder = [...ids]
+      const [movedId] = nextOrder.splice(fromIndex, 1)
+      nextOrder.splice(toIndex, 0, movedId)
+      saveMailboxOrder(nextOrder)
+    },
+    [orderedMailboxes, saveMailboxOrder],
+  )
+
+  function startMailboxDrag(event: DragEvent<HTMLElement>, mailboxId: number) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(mailboxId))
+    setDraggingMailboxId(mailboxId)
+  }
+
+  function dropMailbox(targetId: number) {
+    if (draggingMailboxId === null) return
+
+    moveMailbox(draggingMailboxId, targetId)
+    setDraggingMailboxId(null)
+  }
+
+  async function copyAllValues(field: CopyField) {
+    const messageGroups = await Promise.all(
+      orderedMailboxes.map((mailbox) =>
+        queryClient.fetchQuery({
+          queryKey: ['messages', mailbox.id, filters],
+          queryFn: () => api.messages(mailbox.id, filters),
+        }),
       ),
     )
+    const values = collectMessageValues(messageGroups.flat(), field)
 
-    if (domains.length > 0) {
-      navigator.clipboard.writeText(domains.join('\n'))
+    if (values.length > 0) {
+      await navigator.clipboard.writeText(values.join('\n'))
     }
   }
 
   return (
     <>
-      <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-normal text-slate-950">Active Mailboxes</h1>
-          <p className="mt-1 text-sm text-slate-500">{statsQuery.data?.mailboxes.active ?? 0} connected or syncing</p>
+          <h1 className="text-xl font-semibold tracking-normal text-slate-950">Active Mailboxes</h1>
+          <p className="mt-0.5 text-xs text-slate-500">{statsQuery.data?.mailboxes.active ?? 0} connected or syncing</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <TextButton onClick={() => syncAllMutation.mutate()} disabled={syncAllMutation.isPending || mailboxes.length === 0}>
-            <RefreshCcw className="h-4 w-4" />
-            Sync All
-          </TextButton>
-          <TextButton onClick={copyAllDomains}>
-            <Copy className="h-4 w-4" />
-            Copy All Domains
-          </TextButton>
+        <div className="flex flex-wrap items-center gap-1.5">
           <TextButton variant="primary" onClick={() => setInviteOpen(true)}>
-            <Link className="h-4 w-4" />
+            <Link className="h-3.5 w-3.5" />
             Generate Link
           </TextButton>
-          <IconButton title="Notifications">
-            <Bell className="h-4 w-4" />
-          </IconButton>
-          <div className="grid h-9 w-9 place-items-center rounded-md bg-indigo-100 text-sm font-semibold text-indigo-700">
+          <div className="grid h-8 w-8 place-items-center rounded-md bg-emerald-100 text-xs font-semibold text-emerald-700">
             {(user?.name || user?.email || 'U').slice(0, 1).toUpperCase()}
           </div>
         </div>
       </header>
 
-      <section className="mb-5 grid gap-4 md:grid-cols-4">
+      <section className="mb-3 grid gap-3 md:grid-cols-4">
         <StatCard label="Cached messages" value={statsQuery.data?.messages.cached ?? 0} />
         <StatCard label="Inbox" value={statsQuery.data?.messages.inbox ?? 0} tone="green" />
         <StatCard label="Spam" value={statsQuery.data?.messages.spam ?? 0} tone="red" />
         <StatCard label="Auth pass rate" value={`${statsQuery.data?.messages.auth_pass_rate ?? 0}%`} />
       </section>
 
-      <div className="mb-5 flex flex-wrap items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-1.5">
         <button
           type="button"
           onClick={() => setActiveMailboxId('all')}
@@ -113,26 +150,40 @@ export function DashboardPage() {
         >
           All Mailboxes
         </button>
-        {mailboxes.map((mailbox) => (
-          <button key={mailbox.id} type="button" onClick={() => setActiveMailboxId(mailbox.id)} className={tabClass(activeMailboxId === mailbox.id)}>
+        {orderedMailboxes.map((mailbox) => (
+          <button
+            key={mailbox.id}
+            type="button"
+            draggable
+            onClick={() => setActiveMailboxId(mailbox.id)}
+            onDragStart={(event) => startMailboxDrag(event, mailbox.id)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault()
+              dropMailbox(mailbox.id)
+            }}
+            onDragEnd={() => setDraggingMailboxId(null)}
+            className={tabClass(activeMailboxId === mailbox.id, draggingMailboxId === mailbox.id)}
+            title="Drag to reorder"
+          >
             {mailbox.email}
           </button>
         ))}
-        <button type="button" onClick={() => setInviteOpen(true)} className="rounded-md border border-dashed border-indigo-300 bg-white px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50">
+        <button type="button" onClick={() => setInviteOpen(true)} className="rounded-md border border-dashed border-emerald-300 bg-white px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50">
           Generate Link
         </button>
       </div>
 
-      <div className="mb-5">
+      <div className="mb-3">
         <FiltersBar filters={filters} onChange={setFilters} />
       </div>
 
       {topIpsQuery.data && topIpsQuery.data.length > 0 && (
-        <section className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="mb-3 text-sm font-semibold text-slate-900">Top sending IPs</p>
-          <div className="flex flex-wrap gap-2">
+        <section className="mb-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          <p className="mb-2 text-xs font-semibold text-slate-900">Top sending IPs</p>
+          <div className="flex flex-wrap gap-1.5">
             {topIpsQuery.data.map((ip) => (
-              <span key={ip.observed_sending_ip} className="rounded-md bg-slate-50 px-2 py-1 text-xs text-slate-600 ring-1 ring-slate-200">
+              <span key={ip.observed_sending_ip} className="rounded-md bg-slate-50 px-1.5 py-0.5 text-[11px] text-slate-600 ring-1 ring-slate-200">
                 {ip.observed_sending_ip} · {ip.total}
               </span>
             ))}
@@ -140,10 +191,25 @@ export function DashboardPage() {
         </section>
       )}
 
-      <div className="space-y-8">
-        {mailboxesQuery.isLoading && <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">Loading mailboxes</div>}
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-1.5">
+        <TextButton onClick={() => syncAllMutation.mutate()} disabled={syncAllMutation.isPending || orderedMailboxes.length === 0}>
+          <RefreshCcw className="h-3.5 w-3.5" />
+          Refresh All
+        </TextButton>
+        <TextButton onClick={() => copyAllValues('domain')} disabled={orderedMailboxes.length === 0}>
+          <Copy className="h-3.5 w-3.5" />
+          All Domains
+        </TextButton>
+        <TextButton onClick={() => copyAllValues('ip')} disabled={orderedMailboxes.length === 0}>
+          <Copy className="h-3.5 w-3.5" />
+          All IPs
+        </TextButton>
+      </div>
+
+      <div className="space-y-5">
+        {mailboxesQuery.isLoading && <div className="rounded-lg border border-slate-200 bg-white p-6 text-xs text-slate-500 shadow-sm">Loading mailboxes</div>}
         {!mailboxesQuery.isLoading && visibleMailboxes.length === 0 && (
-          <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">No connected mailboxes</div>
+          <div className="rounded-lg border border-slate-200 bg-white p-6 text-xs text-slate-500 shadow-sm">No connected mailboxes</div>
         )}
         {visibleMailboxes.map((mailbox) => (
           <MailboxSection
@@ -153,6 +219,11 @@ export function DashboardPage() {
             page={pagination[mailbox.id] ?? 1}
             onPageChange={updatePage}
             onOpenMessage={setSelectedMessage}
+            dragging={draggingMailboxId === mailbox.id}
+            onDragStart={(event) => startMailboxDrag(event, mailbox.id)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={() => dropMailbox(mailbox.id)}
+            onDragEnd={() => setDraggingMailboxId(null)}
           />
         ))}
       </div>
@@ -221,7 +292,7 @@ function InviteLinkModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-function StatCard({ label, value, tone = 'indigo' }: { label: string; value: string | number; tone?: 'indigo' | 'green' | 'red' }) {
+function StatCard({ label, value, tone = 'green' }: { label: string; value: string | number; tone?: 'indigo' | 'green' | 'red' }) {
   const toneClass = {
     indigo: 'text-indigo-700',
     green: 'text-emerald-700',
@@ -229,16 +300,71 @@ function StatCard({ label, value, tone = 'indigo' }: { label: string; value: str
   }[tone]
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-normal text-slate-500">{label}</p>
-      <p className={`mt-2 text-2xl font-semibold ${toneClass}`}>{value}</p>
+    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm ring-1 ring-emerald-50">
+      <p className="text-[11px] font-medium uppercase tracking-normal text-slate-500">{label}</p>
+      <p className={`mt-1 text-xl font-semibold ${toneClass}`}>{value}</p>
     </div>
   )
 }
 
-function tabClass(active: boolean) {
+function tabClass(active: boolean, dragging = false) {
   return [
-    'rounded-md border px-3 py-2 text-sm font-medium',
-    active ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+    'cursor-move rounded-md border px-2.5 py-1.5 text-xs font-medium transition',
+    active ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+    dragging ? 'opacity-45 ring-2 ring-emerald-300' : '',
   ].join(' ')
+}
+
+function readStoredMailboxOrder() {
+  try {
+    const value = window.localStorage.getItem(mailboxOrderStorageKey)
+    if (!value) return []
+
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed.filter((id) => Number.isInteger(id)) : []
+  } catch {
+    return []
+  }
+}
+
+function writeStoredMailboxOrder(order: number[]) {
+  try {
+    window.localStorage.setItem(mailboxOrderStorageKey, JSON.stringify(order))
+  } catch {
+    // Local storage can be disabled; the UI still works for the current session.
+  }
+}
+
+function normalizeMailboxOrder(order: number[], mailboxIds: number[]) {
+  const available = new Set(mailboxIds)
+  const existing = order.filter((id) => available.has(id))
+  const missing = mailboxIds.filter((id) => !existing.includes(id))
+  return [...existing, ...missing]
+}
+
+function orderMailboxes<T extends { id: number }>(mailboxes: T[], order: number[]) {
+  const positions = new Map(order.map((id, index) => [id, index]))
+  return [...mailboxes].sort((first, second) => {
+    const firstPosition = positions.get(first.id) ?? Number.MAX_SAFE_INTEGER
+    const secondPosition = positions.get(second.id) ?? Number.MAX_SAFE_INTEGER
+
+    if (firstPosition !== secondPosition) return firstPosition - secondPosition
+    return mailboxes.indexOf(first) - mailboxes.indexOf(second)
+  })
+}
+
+function sameNumberArray(first: number[], second: number[]) {
+  return first.length === second.length && first.every((value, index) => value === second[index])
+}
+
+type CopyField = 'domain' | 'ip'
+
+function collectMessageValues(messages: EmailMessage[], field: CopyField) {
+  return Array.from(
+    new Set(
+      messages
+        .map((message) => (field === 'domain' ? message.from_domain : message.observed_sending_ip))
+        .filter(Boolean) as string[],
+    ),
+  )
 }

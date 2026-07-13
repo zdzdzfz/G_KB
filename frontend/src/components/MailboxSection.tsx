@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type DragEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Mail, MoreHorizontal, Pause, Play, RefreshCcw, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Copy, GripVertical, Mail, MoreHorizontal, Pause, Play, RefreshCcw, Trash2 } from 'lucide-react'
 import { api } from '../api/client'
 import { StatusBadge } from './Badges'
 import { IconButton, TextButton } from './IconButton'
@@ -13,12 +13,22 @@ export function MailboxSection({
   page,
   onPageChange,
   onOpenMessage,
+  dragging = false,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   mailbox: GoogleMailbox
   filters: MessageFilters
   page: number
   onPageChange: (mailboxId: number, page: number) => void
   onOpenMessage: (message: EmailMessage) => void
+  dragging?: boolean
+  onDragStart?: (event: DragEvent<HTMLElement>) => void
+  onDragOver?: (event: DragEvent<HTMLElement>) => void
+  onDrop?: () => void
+  onDragEnd?: () => void
 }) {
   const queryClient = useQueryClient()
   const cardsPerPage = useCardsPerPage()
@@ -48,6 +58,8 @@ export function MailboxSection({
   })
 
   const messages = messagesQuery.data ?? []
+  const mailboxDomains = collectMessageValues(messages, 'domain')
+  const mailboxIps = collectMessageValues(messages, 'ip')
   const maxPosition = Math.max(1, messages.length - cardsPerPage + 1)
   const currentPosition = Math.min(Math.max(page, 1), maxPosition)
   const pageMessages = useMemo(() => {
@@ -68,11 +80,36 @@ export function MailboxSection({
     reconnectMutation.isPending ||
     deleteMutation.isPending
 
+  async function copyMailboxValues(field: CopyField) {
+    const values = field === 'domain' ? mailboxDomains : mailboxIps
+
+    if (values.length > 0) {
+      await navigator.clipboard.writeText(values.join('\n'))
+    }
+  }
+
   return (
-    <section className="space-y-4">
+    <section
+      className={['space-y-4 transition', dragging ? 'opacity-45 ring-2 ring-emerald-300' : ''].join(' ')}
+      onDragOver={onDragOver}
+      onDrop={(event) => {
+        event.preventDefault()
+        onDrop?.()
+      }}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-red-500 shadow-sm">
+          <button
+            type="button"
+            draggable
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            className="grid h-10 w-7 shrink-0 cursor-move place-items-center rounded-md text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
+            title="Drag to reorder mailbox"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-600 shadow-sm">
             <Mail className="h-5 w-5" />
           </div>
           <div className="min-w-0">
@@ -88,8 +125,16 @@ export function MailboxSection({
 
         <div className="flex items-center gap-2">
           <TextButton onClick={() => syncMutation.mutate(mailbox.id)} disabled={isBusy || mailbox.status === 'paused'}>
-            <RefreshCcw className="h-4 w-4" />
-            Sync
+            <RefreshCcw className="h-3.5 w-3.5" />
+            Refresh
+          </TextButton>
+          <TextButton onClick={() => copyMailboxValues('domain')} disabled={mailboxDomains.length === 0}>
+            <Copy className="h-3.5 w-3.5" />
+            Domains
+          </TextButton>
+          <TextButton onClick={() => copyMailboxValues('ip')} disabled={mailboxIps.length === 0}>
+            <Copy className="h-3.5 w-3.5" />
+            IPs
           </TextButton>
           {mailbox.status === 'paused' ? (
             <IconButton onClick={() => resumeMutation.mutate(mailbox.id)} disabled={isBusy} title="Resume">
@@ -218,4 +263,16 @@ function useCardsPerPage() {
 
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString() : 'Never'
+}
+
+type CopyField = 'domain' | 'ip'
+
+function collectMessageValues(messages: EmailMessage[], field: CopyField) {
+  return Array.from(
+    new Set(
+      messages
+        .map((message) => (field === 'domain' ? message.from_domain : message.observed_sending_ip))
+        .filter(Boolean) as string[],
+    ),
+  )
 }
