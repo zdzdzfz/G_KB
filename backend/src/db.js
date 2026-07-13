@@ -267,17 +267,7 @@ export async function migrate() {
     `)
   }
 
-  const user = await get('SELECT id FROM users WHERE email = ?', 'admin@mailauth.local')
-  if (!user) {
-    await run(
-      'INSERT INTO users (name, email, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-      'MailAuth Admin',
-      'admin@mailauth.local',
-      bcrypt.hashSync('password', 10),
-      nowIso(),
-      nowIso(),
-    )
-  }
+  await ensureAdminUser()
 }
 
 export async function all(statement, ...params) {
@@ -310,6 +300,41 @@ export async function closeDb() {
 
 async function execPostgres(sql) {
   await pool.query(sql)
+}
+
+async function ensureAdminUser() {
+  const legacyAdminEmail = 'admin@mailauth.local'
+  const adminEmail = config.admin.email
+  const configuredAdmin = await get('SELECT id FROM users WHERE email = ?', adminEmail)
+
+  if (configuredAdmin) {
+    if (config.admin.passwordConfigured) {
+      await run('UPDATE users SET password = ?, updated_at = ? WHERE id = ?', bcrypt.hashSync(config.admin.password, 10), nowIso(), configuredAdmin.id)
+    }
+    return
+  }
+
+  const legacyAdmin = adminEmail === legacyAdminEmail ? null : await get('SELECT id FROM users WHERE email = ?', legacyAdminEmail)
+  if (legacyAdmin) {
+    await run(
+      'UPDATE users SET name = ?, email = ?, password = ?, updated_at = ? WHERE id = ?',
+      'G-KB Admin',
+      adminEmail,
+      bcrypt.hashSync(config.admin.password, 10),
+      nowIso(),
+      legacyAdmin.id,
+    )
+    return
+  }
+
+  await run(
+    'INSERT INTO users (name, email, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+    'G-KB Admin',
+    adminEmail,
+    bcrypt.hashSync(config.admin.password, 10),
+    nowIso(),
+    nowIso(),
+  )
 }
 
 function toPostgres(statement) {

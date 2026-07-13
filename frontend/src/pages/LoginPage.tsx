@@ -6,8 +6,8 @@ import { useAuth } from '../auth/AuthContext'
 export function LoginPage() {
   const { login, token } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('admin@mailauth.local')
-  const [password, setPassword] = useState('password')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -65,6 +65,8 @@ export function LoginPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
               className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none ring-indigo-200 focus:border-indigo-500 focus:ring-2"
             />
           </label>
@@ -75,6 +77,8 @@ export function LoginPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               type="password"
+              placeholder="Enter your password"
+              autoComplete="current-password"
               className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none ring-indigo-200 focus:border-indigo-500 focus:ring-2"
             />
           </label>

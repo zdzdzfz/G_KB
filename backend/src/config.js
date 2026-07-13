@@ -10,6 +10,11 @@ export const config = {
   appUrl: process.env.APP_URL || 'http://localhost:8000',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   appKey: process.env.APP_KEY || 'mailauth-monitor-dev-key',
+  admin: {
+    email: String(process.env.ADMIN_EMAIL || 'admin@mailauth.local').trim().toLowerCase(),
+    password: process.env.ADMIN_PASSWORD || 'password',
+    passwordConfigured: Boolean(process.env.ADMIN_PASSWORD),
+  },
   databasePath:
     process.env.DB_CONNECTION === 'sqlite' && process.env.DB_DATABASE
       ? path.resolve(rootDir, process.env.DB_DATABASE)

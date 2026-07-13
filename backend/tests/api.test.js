@@ -4,6 +4,8 @@ import assert from 'node:assert/strict'
 process.env.DATABASE_URL = ''
 process.env.DB_CONNECTION = 'sqlite'
 process.env.DB_DATABASE = 'database/test.sqlite'
+process.env.ADMIN_EMAIL = 'admin@mailauth.local'
+process.env.ADMIN_PASSWORD = 'password'
 
 const { createApp } = await import('../src/app.js')
 
