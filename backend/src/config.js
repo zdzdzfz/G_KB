@@ -3,6 +3,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const adminEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase()
+const adminPassword = process.env.ADMIN_PASSWORD || ''
 
 export const config = {
   rootDir,
@@ -11,9 +13,9 @@ export const config = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   appKey: process.env.APP_KEY || 'mailauth-monitor-dev-key',
   admin: {
-    email: String(process.env.ADMIN_EMAIL || 'admin@mailauth.local').trim().toLowerCase(),
-    password: process.env.ADMIN_PASSWORD || 'password',
-    passwordConfigured: Boolean(process.env.ADMIN_PASSWORD),
+    email: adminEmail,
+    password: adminPassword,
+    configured: Boolean(adminEmail && adminPassword),
   },
   databasePath:
     process.env.DB_CONNECTION === 'sqlite' && process.env.DB_DATABASE

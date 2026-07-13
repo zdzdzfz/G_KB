@@ -303,14 +303,15 @@ async function execPostgres(sql) {
 }
 
 async function ensureAdminUser() {
+  if (!config.admin.configured) return
+
   const legacyAdminEmail = 'admin@mailauth.local'
   const adminEmail = config.admin.email
+  const adminPassword = bcrypt.hashSync(config.admin.password, 10)
   const configuredAdmin = await get('SELECT id FROM users WHERE email = ?', adminEmail)
 
   if (configuredAdmin) {
-    if (config.admin.passwordConfigured) {
-      await run('UPDATE users SET password = ?, updated_at = ? WHERE id = ?', bcrypt.hashSync(config.admin.password, 10), nowIso(), configuredAdmin.id)
-    }
+    await run('UPDATE users SET password = ?, updated_at = ? WHERE id = ?', adminPassword, nowIso(), configuredAdmin.id)
     return
   }
 
@@ -320,7 +321,7 @@ async function ensureAdminUser() {
       'UPDATE users SET name = ?, email = ?, password = ?, updated_at = ? WHERE id = ?',
       'G-KB Admin',
       adminEmail,
-      bcrypt.hashSync(config.admin.password, 10),
+      adminPassword,
       nowIso(),
       legacyAdmin.id,
     )
@@ -331,7 +332,7 @@ async function ensureAdminUser() {
     'INSERT INTO users (name, email, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
     'G-KB Admin',
     adminEmail,
-    bcrypt.hashSync(config.admin.password, 10),
+    adminPassword,
     nowIso(),
     nowIso(),
   )
