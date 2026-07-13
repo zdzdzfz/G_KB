@@ -4,6 +4,7 @@ import { Pause, Play, RefreshCcw, Save, Trash2, Undo2 } from 'lucide-react'
 import { api } from '../api/client'
 import { StatusBadge } from '../components/Badges'
 import { IconButton, TextButton } from '../components/IconButton'
+import { applyThemePreference } from '../theme'
 import type { AppSettings, GoogleMailbox } from '../types'
 
 export function SettingsPage() {
@@ -17,6 +18,11 @@ export function SettingsPage() {
       setSettings(settingsQuery.data)
     }
   }, [settingsQuery.data])
+
+  useEffect(() => {
+    if (!settings) return undefined
+    return applyThemePreference(settings.appearance.theme)
+  }, [settings?.appearance.theme])
 
   const saveMutation = useMutation({
     mutationFn: (payload: AppSettings) => api.updateSettings(payload),

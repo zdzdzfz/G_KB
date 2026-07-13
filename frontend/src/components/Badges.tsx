@@ -20,10 +20,16 @@ const statusColors: Record<GoogleMailboxStatus, string> = {
   error: 'bg-red-50 text-red-700 ring-red-200',
 }
 
-export function AuthBadge({ label, value }: { label: string; value: AuthResultName }) {
+export function AuthBadge({ label, value, showValue = true }: { label: string; value: AuthResultName; showValue?: boolean }) {
   return (
-    <span className={clsx('inline-flex items-center rounded-md px-2 py-1 text-[11px] font-semibold uppercase ring-1', authColors[value])}>
-      {label}: {value}
+    <span
+      className={clsx(
+        'inline-flex items-center rounded-md font-semibold uppercase ring-1',
+        showValue ? 'px-2 py-1 text-[11px]' : 'px-1.5 py-0.5 text-[9px]',
+        authColors[value],
+      )}
+    >
+      {showValue ? `${label}: ${value}` : label}
     </span>
   )
 }
@@ -36,7 +42,7 @@ export function StatusBadge({ status }: { status: GoogleMailboxStatus }) {
   )
 }
 
-export function PlacementBadge({ placement }: { placement: 'inbox' | 'spam' | 'other' }) {
+export function PlacementBadge({ placement, compact = false }: { placement: 'inbox' | 'spam' | 'other'; compact?: boolean }) {
   const classes = {
     inbox: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
     spam: 'bg-red-50 text-red-700 ring-red-200',
@@ -44,7 +50,7 @@ export function PlacementBadge({ placement }: { placement: 'inbox' | 'spam' | 'o
   }[placement]
 
   return (
-    <span className={clsx('inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold capitalize ring-1', classes)}>
+    <span className={clsx('inline-flex items-center rounded-md font-semibold capitalize ring-1', compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-xs', classes)}>
       {placement}
     </span>
   )

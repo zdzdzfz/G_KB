@@ -48,18 +48,18 @@ export function MailboxSection({
   })
 
   const messages = messagesQuery.data ?? []
-  const pageCount = Math.max(1, Math.ceil(messages.length / cardsPerPage))
-  const currentPage = Math.min(page, pageCount)
+  const maxPosition = Math.max(1, messages.length - cardsPerPage + 1)
+  const currentPosition = Math.min(Math.max(page, 1), maxPosition)
   const pageMessages = useMemo(() => {
-    const start = (currentPage - 1) * cardsPerPage
+    const start = currentPosition - 1
     return messages.slice(start, start + cardsPerPage)
-  }, [cardsPerPage, currentPage, messages])
+  }, [cardsPerPage, currentPosition, messages])
 
   useEffect(() => {
-    if (page !== currentPage) {
-      onPageChange(mailbox.id, currentPage)
+    if (page !== currentPosition) {
+      onPageChange(mailbox.id, currentPosition)
     }
-  }, [currentPage, mailbox.id, onPageChange, page])
+  }, [currentPosition, mailbox.id, onPageChange, page])
 
   const isBusy =
     syncMutation.isPending ||
@@ -81,7 +81,7 @@ export function MailboxSection({
               <StatusBadge status={mailbox.status} />
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Showing latest 25 messages · Total {mailbox.messages_total} · Last sync {formatDate(mailbox.last_synced_at)}
+              Showing latest 25 messages - Total {mailbox.messages_total} - Last sync {formatDate(mailbox.last_synced_at)}
             </p>
           </div>
         </div>
@@ -141,25 +141,25 @@ export function MailboxSection({
         </div>
       )}
 
-      <div className="grid grid-cols-[44px_1fr_44px] items-stretch gap-3">
+      <div className="relative">
         <button
           type="button"
-          onClick={() => onPageChange(mailbox.id, Math.max(1, currentPage - 1))}
-          disabled={currentPage === 1}
-          className="grid min-h-[248px] place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50 disabled:opacity-40"
+          onClick={() => onPageChange(mailbox.id, Math.max(1, currentPosition - 1))}
+          disabled={currentPosition === 1}
+          className="absolute left-0 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white/95 text-slate-500 shadow-md transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-30 md:-left-1"
           title="Previous"
         >
-          <ChevronLeft className="h-8 w-8" />
+          <ChevronLeft className="h-5 w-5" />
         </button>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-2 px-7 md:grid-cols-4 md:px-8 xl:grid-cols-8">
           {messagesQuery.isLoading &&
             Array.from({ length: cardsPerPage }).map((_, index) => (
-              <div key={index} className="min-h-[248px] animate-pulse rounded-lg border border-slate-200 bg-white shadow-sm" />
+              <div key={index} className="min-h-[172px] animate-pulse rounded-lg border border-slate-200 bg-white shadow-sm" />
             ))}
           {!messagesQuery.isLoading && pageMessages.map((message) => <MessageCard key={message.id} message={message} onOpen={onOpenMessage} />)}
           {!messagesQuery.isLoading && pageMessages.length === 0 && (
-            <div className="col-span-full grid min-h-[248px] place-items-center rounded-lg border border-slate-200 bg-white text-sm text-slate-500 shadow-sm">
+            <div className="col-span-full grid min-h-[172px] place-items-center rounded-lg border border-slate-200 bg-white text-sm text-slate-500 shadow-sm">
               No cached messages
             </div>
           )}
@@ -167,33 +167,15 @@ export function MailboxSection({
 
         <button
           type="button"
-          onClick={() => onPageChange(mailbox.id, Math.min(pageCount, currentPage + 1))}
-          disabled={currentPage === pageCount}
-          className="grid min-h-[248px] place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50 disabled:opacity-40"
+          onClick={() => onPageChange(mailbox.id, Math.min(maxPosition, currentPosition + 1))}
+          disabled={currentPosition === maxPosition}
+          className="absolute right-0 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white/95 text-slate-500 shadow-md transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-30 md:-right-1"
           title="Next"
         >
-          <ChevronRight className="h-8 w-8" />
+          <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
-      <div className="flex items-center justify-center gap-2">
-        {Array.from({ length: pageCount }).map((_, index) => {
-          const targetPage = index + 1
-          return (
-            <button
-              key={targetPage}
-              type="button"
-              onClick={() => onPageChange(mailbox.id, targetPage)}
-              className={[
-                'h-8 min-w-8 rounded-md border px-2 text-sm',
-                targetPage === currentPage ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
-              ].join(' ')}
-            >
-              {targetPage}
-            </button>
-          )
-        })}
-      </div>
     </section>
   )
 }
@@ -212,14 +194,14 @@ function useMailboxMutation(action: (id: number) => Promise<GoogleMailbox>) {
 }
 
 function useCardsPerPage() {
-  const [cardsPerPage, setCardsPerPage] = useState(4)
+  const [cardsPerPage, setCardsPerPage] = useState(8)
 
   useEffect(() => {
     const update = () => {
       if (window.matchMedia('(min-width: 1280px)').matches) {
-        setCardsPerPage(4)
+        setCardsPerPage(8)
       } else if (window.matchMedia('(min-width: 768px)').matches) {
-        setCardsPerPage(2)
+        setCardsPerPage(4)
       } else {
         setCardsPerPage(1)
       }

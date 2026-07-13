@@ -1,10 +1,19 @@
+import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { BarChart3, LogOut, Settings, ShieldCheck } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { applyThemePreference } from '../theme'
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const settingsQuery = useQuery({ queryKey: ['settings'], queryFn: api.settings })
+
+  useEffect(() => {
+    return applyThemePreference(settingsQuery.data?.appearance.theme ?? 'dark')
+  }, [settingsQuery.data?.appearance.theme])
 
   async function handleLogout() {
     await logout()

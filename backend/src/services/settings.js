@@ -7,7 +7,7 @@ export const defaultSettings = {
     sync_interval: 15,
   },
   appearance: {
-    theme: 'light',
+    theme: 'dark',
     compact_mode: false,
     collapsed_sidebar: false,
   },

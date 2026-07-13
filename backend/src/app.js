@@ -308,10 +308,21 @@ async function consumeOAuthState(state) {
 function messageFilterSql(mailboxId, query) {
   const where = ['google_mailbox_id = ?']
   const params = [mailboxId]
-  if (query.search) {
-    where.push('(sender_name LIKE ? OR sender_email LIKE ? OR subject LIKE ? OR from_domain LIKE ? OR observed_sending_ip LIKE ?)')
-    const value = `%${query.search}%`
-    params.push(value, value, value, value, value)
+  const search = String(query.search || '').trim().toLowerCase()
+  if (search) {
+    where.push(
+      `(
+        LOWER(COALESCE(sender_name, '')) LIKE ?
+        OR LOWER(COALESCE(sender_email, '')) LIKE ?
+        OR LOWER(COALESCE(subject, '')) LIKE ?
+        OR LOWER(COALESCE(from_domain, '')) LIKE ?
+        OR LOWER(COALESCE(return_path_domain, '')) LIKE ?
+        OR LOWER(COALESCE(return_path, '')) LIKE ?
+        OR LOWER(COALESCE(observed_sending_ip, '')) LIKE ?
+      )`,
+    )
+    const value = `%${search}%`
+    params.push(value, value, value, value, value, value, value)
   }
   const map = { placement: 'placement', category: 'gmail_category', spf: 'spf_result', dkim: 'dkim_result', dmarc: 'dmarc_result' }
   for (const [input, column] of Object.entries(map)) {
