@@ -49,7 +49,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <main className="min-h-screen pl-[72px] md:pl-60">
-        <div className="mx-auto max-w-[1600px] px-3 py-3 md:px-5">{children}</div>
+        <div className="mx-auto max-w-none px-3 py-3 md:px-5">{children}</div>
       </main>
     </div>
   )

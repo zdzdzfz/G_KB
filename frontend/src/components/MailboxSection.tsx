@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type DragEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Copy, GripVertical, Mail, MoreHorizontal, Pause, Play, RefreshCcw, Trash2 } from 'lucide-react'
 import { api } from '../api/client'
@@ -31,7 +31,7 @@ export function MailboxSection({
   onDragEnd?: () => void
 }) {
   const queryClient = useQueryClient()
-  const cardsPerPage = useCardsPerPage()
+  const { cardsPerPage, gridRef, gridStyle } = useCardsPerPage()
   const [menuOpen, setMenuOpen] = useState(false)
 
   const messagesQuery = useQuery({
@@ -125,31 +125,31 @@ export function MailboxSection({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-emerald-100 bg-emerald-50/70 p-0.5 shadow-sm">
-          <TextButton variant="toolbarPrimary" onClick={() => syncMutation.mutate(mailbox.id)} disabled={isBusy || mailbox.status === 'paused'}>
-            <RefreshCcw className="h-3 w-3" />
+        <div className="flex flex-wrap items-center gap-0.5 rounded-md border border-emerald-100 bg-emerald-50/70 p-0.5 shadow-sm">
+          <TextButton variant="toolbarMiniPrimary" onClick={() => syncMutation.mutate(mailbox.id)} disabled={isBusy || mailbox.status === 'paused'}>
+            <RefreshCcw className="h-2.5 w-2.5" />
             Refresh
           </TextButton>
-          <TextButton variant="toolbar" onClick={() => copyMailboxValues('domain')} disabled={mailboxDomains.length === 0}>
-            <Copy className="h-3 w-3" />
+          <TextButton variant="toolbarMini" onClick={() => copyMailboxValues('domain')} disabled={mailboxDomains.length === 0}>
+            <Copy className="h-2.5 w-2.5" />
             Domains
           </TextButton>
-          <TextButton variant="toolbar" onClick={() => copyMailboxValues('ip')} disabled={mailboxIps.length === 0}>
-            <Copy className="h-3 w-3" />
+          <TextButton variant="toolbarMini" onClick={() => copyMailboxValues('ip')} disabled={mailboxIps.length === 0}>
+            <Copy className="h-2.5 w-2.5" />
             IPs
           </TextButton>
           {mailbox.status === 'paused' ? (
-            <IconButton variant="toolbar" onClick={() => resumeMutation.mutate(mailbox.id)} disabled={isBusy} title="Resume">
-              <Play className="h-3.5 w-3.5" />
+            <IconButton variant="toolbarMini" onClick={() => resumeMutation.mutate(mailbox.id)} disabled={isBusy} title="Resume">
+              <Play className="h-3 w-3" />
             </IconButton>
           ) : (
-            <IconButton variant="toolbar" onClick={() => pauseMutation.mutate(mailbox.id)} disabled={isBusy} title="Pause">
-              <Pause className="h-3.5 w-3.5" />
+            <IconButton variant="toolbarMini" onClick={() => pauseMutation.mutate(mailbox.id)} disabled={isBusy} title="Pause">
+              <Pause className="h-3 w-3" />
             </IconButton>
           )}
           <div className="relative">
-            <IconButton variant="toolbar" onClick={() => setMenuOpen((open) => !open)} title="More">
-              <MoreHorizontal className="h-3.5 w-3.5" />
+            <IconButton variant="toolbarMini" onClick={() => setMenuOpen((open) => !open)} title="More">
+              <MoreHorizontal className="h-3 w-3" />
             </IconButton>
             {menuOpen && (
               <div className="absolute right-0 top-11 z-20 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
@@ -199,7 +199,7 @@ export function MailboxSection({
           <ChevronLeft className="h-5 w-5" />
         </button>
 
-        <div className="grid gap-2 px-7 md:grid-cols-4 md:px-8 xl:grid-cols-8">
+        <div ref={gridRef} style={gridStyle} className="grid gap-2 px-7 md:px-8">
           {messagesQuery.isLoading &&
             Array.from({ length: cardsPerPage }).map((_, index) => (
               <div key={index} className="min-h-[172px] animate-pulse rounded-lg border border-slate-200 bg-white shadow-sm" />
@@ -241,26 +241,40 @@ function useMailboxMutation(action: (id: number) => Promise<GoogleMailbox>) {
 }
 
 function useCardsPerPage() {
+  const gridRef = useRef<HTMLDivElement | null>(null)
   const [cardsPerPage, setCardsPerPage] = useState(8)
+  const [gridStyle, setGridStyle] = useState<CSSProperties>({
+    gridTemplateColumns: 'repeat(8, minmax(0, 1fr))',
+  })
 
   useEffect(() => {
+    const minCardWidth = 170
+    const gap = 8
+
     const update = () => {
-      if (window.matchMedia('(min-width: 1280px)').matches) {
-        setCardsPerPage(8)
-      } else if (window.matchMedia('(min-width: 768px)').matches) {
-        setCardsPerPage(4)
-      } else {
-        setCardsPerPage(1)
-      }
+      const element = gridRef.current
+      const rawWidth = element?.clientWidth ?? window.innerWidth
+      const styles = element ? window.getComputedStyle(element) : null
+      const horizontalPadding = styles ? parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight) : 0
+      const width = Math.max(0, rawWidth - horizontalPadding)
+      const nextCardsPerPage = Math.min(12, Math.max(1, Math.floor((width + gap) / (minCardWidth + gap))))
+
+      setCardsPerPage(nextCardsPerPage)
+      setGridStyle({ gridTemplateColumns: `repeat(${nextCardsPerPage}, minmax(0, 1fr))` })
     }
 
     update()
+    const observer = new ResizeObserver(update)
+    if (gridRef.current) observer.observe(gridRef.current)
     window.addEventListener('resize', update)
 
-    return () => window.removeEventListener('resize', update)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', update)
+    }
   }, [])
 
-  return cardsPerPage
+  return { cardsPerPage, gridRef, gridStyle }
 }
 
 function formatDate(value: string | null) {

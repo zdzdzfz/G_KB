@@ -224,7 +224,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         {mailboxesQuery.isLoading && <div className="rounded-lg border border-slate-200 bg-white p-6 text-xs text-slate-500 shadow-sm">Loading mailboxes</div>}
         {!mailboxesQuery.isLoading && visibleMailboxes.length === 0 && (
           <div className="rounded-lg border border-slate-200 bg-white p-6 text-xs text-slate-500 shadow-sm">No connected mailboxes</div>
