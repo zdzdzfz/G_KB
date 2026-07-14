@@ -28,6 +28,7 @@ export const config = {
     redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:8000/api/google/callback',
     messageLimit: Number(process.env.GMAIL_MESSAGE_LIMIT || 25),
     syncCooldownSeconds: Number(process.env.GMAIL_SYNC_COOLDOWN_SECONDS || 60),
+    autoSyncCooldownSeconds: Number(process.env.GMAIL_AUTO_SYNC_COOLDOWN_SECONDS || 1),
   },
 }
 

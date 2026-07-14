@@ -89,7 +89,7 @@ export async function createApp() {
     const results = []
     for (const mailbox of mailboxes) {
       try {
-        if (automatic && recentlySynced(mailbox)) {
+        if (automatic && recentlySynced(mailbox, config.google.autoSyncCooldownSeconds)) {
           results.push({ mailbox_id: mailbox.id, status: 'skipped' })
           continue
         }
@@ -350,11 +350,11 @@ function messageFilterSql(mailboxId, query) {
   }
 }
 
-function recentlySynced(mailbox) {
+function recentlySynced(mailbox, cooldownSeconds) {
   if (!mailbox.last_synced_at) return false
 
   const seconds = (Date.now() - Date.parse(mailbox.last_synced_at)) / 1000
-  return seconds < config.google.syncCooldownSeconds
+  return seconds < cooldownSeconds
 }
 
 async function getSettings(userId) {

@@ -76,7 +76,7 @@ export function SettingsPage() {
           <Select label="Default date range" value={settings.general.default_date_range} onChange={(value) => update('general', 'default_date_range', value as AppSettings['general']['default_date_range'])} options={['24h', '7d', '14d', '30d', '90d']} />
           <Toggle label="Automatic synchronization" checked={settings.general.automatic_synchronization} onChange={(value) => update('general', 'automatic_synchronization', value)} />
           <Select
-            label="Sync interval"
+            label="Sync interval (seconds)"
             value={String(settings.general.sync_interval)}
             onChange={(value) => update('general', 'sync_interval', Number(value) as AppSettings['general']['sync_interval'])}
             options={['1', '5', '10', '15', '30', '60']}

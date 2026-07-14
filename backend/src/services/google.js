@@ -116,6 +116,7 @@ export async function upsertMailbox(userId, profile, tokens) {
 }
 
 export async function syncMailbox(mailboxId, { manual = false, auth = null } = {}) {
+  const authProvided = Boolean(auth)
   const mailbox = await get('SELECT * FROM google_mailboxes WHERE id = ?', mailboxId)
   if (!mailbox) {
     const error = new Error('Mailbox not found.')
@@ -160,7 +161,18 @@ export async function syncMailbox(mailboxId, { manual = false, auth = null } = {
       maxResults: config.google.messageLimit,
     })
 
-    for (const ref of list.messages || []) {
+    const messageRefs = list.messages || []
+    const refreshExistingMessages = manual || authProvided
+    const cachedGmailMessageIds = refreshExistingMessages
+      ? new Set()
+      : await cachedMessageIds(
+          mailbox.id,
+          messageRefs.map((ref) => ref.id),
+        )
+
+    for (const ref of messageRefs) {
+      if (cachedGmailMessageIds.has(ref.id)) continue
+
       const { data: message } = await gmail.users.messages.get({
         userId: 'me',
         id: ref.id,
@@ -267,6 +279,19 @@ async function trimMessages(mailboxId) {
   if (keep.length === 0) return
   const placeholders = keep.map(() => '?').join(',')
   await run(`DELETE FROM email_messages WHERE google_mailbox_id = ? AND id NOT IN (${placeholders})`, mailboxId, ...keep)
+}
+
+async function cachedMessageIds(mailboxId, gmailMessageIds) {
+  if (gmailMessageIds.length === 0) return new Set()
+
+  const placeholders = gmailMessageIds.map(() => '?').join(',')
+  const rows = await all(
+    `SELECT gmail_message_id FROM email_messages WHERE google_mailbox_id = ? AND gmail_message_id IN (${placeholders})`,
+    mailboxId,
+    ...gmailMessageIds,
+  )
+
+  return new Set(rows.map((row) => row.gmail_message_id))
 }
 
 async function markReconnectRequired(mailboxId) {

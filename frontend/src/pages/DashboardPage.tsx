@@ -55,7 +55,7 @@ export function DashboardPage() {
     [activeMailboxId, orderedMailboxes],
   )
   const autoSyncEnabled = settingsQuery.data?.general.automatic_synchronization ?? true
-  const autoSyncIntervalMs = Math.max(1, settingsQuery.data?.general.sync_interval ?? 1) * 60_000
+  const autoSyncIntervalMs = Math.max(1, settingsQuery.data?.general.sync_interval ?? 1) * 1000
   const syncableMailboxCount = orderedMailboxes.filter((mailbox) => mailbox.status !== 'paused' && mailbox.status !== 'reconnect_required').length
 
   useDashboardAutoSync({
@@ -352,7 +352,7 @@ function useDashboardAutoSync({ enabled, intervalMs, queryClient }: { enabled: b
       }
     }
 
-    const firstSync = window.setTimeout(() => void sync(), 4000)
+    const firstSync = window.setTimeout(() => void sync(), 1000)
     const interval = window.setInterval(() => void sync(), intervalMs)
     const syncWhenVisible = () => {
       if (!document.hidden) void sync()
