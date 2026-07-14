@@ -79,7 +79,7 @@ export function SettingsPage() {
             label="Sync interval"
             value={String(settings.general.sync_interval)}
             onChange={(value) => update('general', 'sync_interval', Number(value) as AppSettings['general']['sync_interval'])}
-            options={['5', '10', '15', '30', '60']}
+            options={['1', '5', '10', '15', '30', '60']}
           />
         </Panel>
 

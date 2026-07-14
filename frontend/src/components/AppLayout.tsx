@@ -12,7 +12,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const settingsQuery = useQuery({ queryKey: ['settings'], queryFn: api.settings })
 
   useEffect(() => {
-    return applyThemePreference(settingsQuery.data?.appearance.theme ?? 'dark')
+    return applyThemePreference(settingsQuery.data?.appearance.theme ?? 'light')
   }, [settingsQuery.data?.appearance.theme])
 
   async function handleLogout() {

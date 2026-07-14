@@ -99,7 +99,7 @@ export type AppSettings = {
     timezone: string
     default_date_range: '24h' | '7d' | '14d' | '30d' | '90d'
     automatic_synchronization: boolean
-    sync_interval: 5 | 10 | 15 | 30 | 60
+    sync_interval: 1 | 5 | 10 | 15 | 30 | 60
   }
   appearance: {
     theme: 'light' | 'dark' | 'system'

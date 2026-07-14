@@ -2,7 +2,7 @@ import type { AppSettings } from './types'
 
 export type ThemePreference = AppSettings['appearance']['theme']
 
-export function applyThemePreference(theme: ThemePreference = 'dark') {
+export function applyThemePreference(theme: ThemePreference = 'light') {
   const media = window.matchMedia('(prefers-color-scheme: dark)')
 
   const sync = () => {

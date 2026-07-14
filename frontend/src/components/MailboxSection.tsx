@@ -92,34 +92,34 @@ export function MailboxSection({
 
   return (
     <section
-      className={['space-y-4 transition', dragging ? 'opacity-45 ring-2 ring-emerald-300' : ''].join(' ')}
+      className={['space-y-3 rounded-xl border border-slate-200 bg-white/85 p-3 shadow-sm ring-1 ring-emerald-50/80 transition', dragging ? 'opacity-45 ring-2 ring-emerald-300' : ''].join(' ')}
       onDragOver={onDragOver}
       onDrop={(event) => {
         event.preventDefault()
         onDrop?.()
       }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-200 pb-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
           <button
             type="button"
             draggable
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
-            className="grid h-10 w-7 shrink-0 cursor-move place-items-center rounded-md text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
+            className="grid h-9 w-6 shrink-0 cursor-move place-items-center rounded-md text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
             title="Drag to reorder mailbox"
           >
             <GripVertical className="h-4 w-4" />
           </button>
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-600 shadow-sm">
-            <Mail className="h-5 w-5" />
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-600 shadow-sm">
+            <Mail className="h-4 w-4" />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-base font-semibold text-slate-950">{mailbox.email}</h2>
+              <h2 className="truncate text-sm font-semibold text-slate-950">{mailbox.email}</h2>
               <StatusBadge status={mailbox.status} />
             </div>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-0.5 text-[11px] text-slate-500">
               Showing latest 25 messages - Total {mailbox.messages_total} - Last sync {formatDate(mailbox.last_synced_at)}
             </p>
           </div>

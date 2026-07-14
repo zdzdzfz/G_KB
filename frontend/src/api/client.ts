@@ -60,8 +60,8 @@ export const api = {
   async mailboxes() {
     return (await apiClient.get<{ data: GoogleMailbox[] }>('/mailboxes')).data.data
   },
-  async syncAll() {
-    return (await apiClient.post<{ results: { mailbox_id: number; status: string; message?: string }[] }>('/mailboxes/sync-all')).data
+  async syncAll(options: { automatic?: boolean } = {}) {
+    return (await apiClient.post<{ results: { mailbox_id: number; status: string; message?: string }[] }>('/mailboxes/sync-all', options)).data
   },
   async syncMailbox(id: number) {
     return (await apiClient.post<{ data: GoogleMailbox }>(`/mailboxes/${id}/sync`)).data.data

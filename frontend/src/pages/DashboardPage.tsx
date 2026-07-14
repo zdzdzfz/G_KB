@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { Copy, Link, RefreshCcw, X } from 'lucide-react'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -37,6 +37,7 @@ export function DashboardPage() {
   const mailboxesQuery = useQuery({ queryKey: ['mailboxes'], queryFn: api.mailboxes })
   const statsQuery = useQuery({ queryKey: ['dashboard', 'stats'], queryFn: api.stats })
   const topIpsQuery = useQuery({ queryKey: ['dashboard', 'top-sending-ips'], queryFn: api.topSendingIps })
+  const settingsQuery = useQuery({ queryKey: ['settings'], queryFn: api.settings })
 
   const syncAllMutation = useMutation({
     mutationFn: api.syncAll,
@@ -53,6 +54,15 @@ export function DashboardPage() {
     () => (activeMailboxId === 'all' ? orderedMailboxes : orderedMailboxes.filter((mailbox) => mailbox.id === activeMailboxId)),
     [activeMailboxId, orderedMailboxes],
   )
+  const autoSyncEnabled = settingsQuery.data?.general.automatic_synchronization ?? true
+  const autoSyncIntervalMs = Math.max(1, settingsQuery.data?.general.sync_interval ?? 1) * 60_000
+  const syncableMailboxCount = orderedMailboxes.filter((mailbox) => mailbox.status !== 'paused' && mailbox.status !== 'reconnect_required').length
+
+  useDashboardAutoSync({
+    enabled: autoSyncEnabled && syncableMailboxCount > 0,
+    intervalMs: autoSyncIntervalMs,
+    queryClient,
+  })
 
   const saveMailboxOrder = useCallback((order: number[]) => {
     setMailboxOrder(order)
@@ -140,14 +150,14 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <section className="mb-3 grid gap-3 md:grid-cols-4">
+      <section className="mb-2 grid gap-2 md:grid-cols-4">
         <StatCard label="Cached messages" value={statsQuery.data?.messages.cached ?? 0} />
         <StatCard label="Inbox" value={statsQuery.data?.messages.inbox ?? 0} tone="green" />
         <StatCard label="Spam" value={statsQuery.data?.messages.spam ?? 0} tone="red" />
         <StatCard label="Auth pass rate" value={`${statsQuery.data?.messages.auth_pass_rate ?? 0}%`} />
       </section>
 
-      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
         <button
           type="button"
           onClick={() => setActiveMailboxId('all')}
@@ -179,12 +189,12 @@ export function DashboardPage() {
         </button>
       </div>
 
-      <div className="mb-3">
+      <div className="mb-2">
         <FiltersBar filters={filters} onChange={setFilters} />
       </div>
 
       {topIpsQuery.data && topIpsQuery.data.length > 0 && (
-        <section className="mb-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <section className="mb-3 rounded-lg border border-slate-200 bg-white/80 p-2.5 shadow-sm">
           <p className="mb-2 text-xs font-semibold text-slate-900">Top sending IPs</p>
           <div className="flex flex-wrap gap-1.5">
             {topIpsQuery.data.map((ip) => (
@@ -199,7 +209,7 @@ export function DashboardPage() {
       <div className="mb-3 flex justify-end">
         <div className="inline-flex flex-wrap items-center gap-0.5 rounded-lg border border-emerald-100 bg-emerald-50/70 p-0.5 shadow-sm">
           <span className="px-1 text-[9px] font-semibold uppercase tracking-normal text-emerald-700">All</span>
-          <TextButton variant="toolbarPrimary" title="Refresh all mailboxes" onClick={() => syncAllMutation.mutate()} disabled={syncAllMutation.isPending || orderedMailboxes.length === 0}>
+          <TextButton variant="toolbarPrimary" title="Refresh all mailboxes" onClick={() => syncAllMutation.mutate({ automatic: false })} disabled={syncAllMutation.isPending || orderedMailboxes.length === 0}>
             <RefreshCcw className="h-3 w-3" />
             Refresh
           </TextButton>
@@ -214,7 +224,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-4">
         {mailboxesQuery.isLoading && <div className="rounded-lg border border-slate-200 bg-white p-6 text-xs text-slate-500 shadow-sm">Loading mailboxes</div>}
         {!mailboxesQuery.isLoading && visibleMailboxes.length === 0 && (
           <div className="rounded-lg border border-slate-200 bg-white p-6 text-xs text-slate-500 shadow-sm">No connected mailboxes</div>
@@ -308,11 +318,55 @@ function StatCard({ label, value, tone = 'green' }: { label: string; value: stri
   }[tone]
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm ring-1 ring-emerald-50">
+    <div className="rounded-lg border border-slate-200 bg-white/75 p-2.5 shadow-sm ring-1 ring-emerald-50">
       <p className="text-[11px] font-medium uppercase tracking-normal text-slate-500">{label}</p>
-      <p className={`mt-1 text-xl font-semibold ${toneClass}`}>{value}</p>
+      <p className={`mt-0.5 text-lg font-semibold ${toneClass}`}>{value}</p>
     </div>
   )
+}
+
+function useDashboardAutoSync({ enabled, intervalMs, queryClient }: { enabled: boolean; intervalMs: number; queryClient: QueryClient }) {
+  useEffect(() => {
+    if (!enabled) return undefined
+
+    let running = false
+    let cancelled = false
+
+    const sync = async () => {
+      if (running || document.hidden) return
+
+      running = true
+      try {
+        await api.syncAll({ automatic: true })
+        if (!cancelled) {
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['mailboxes'] }),
+            queryClient.invalidateQueries({ queryKey: ['messages'] }),
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+          ])
+        }
+      } catch {
+        // Auto sync stays quiet; manual refresh is still available for visible errors.
+      } finally {
+        running = false
+      }
+    }
+
+    const firstSync = window.setTimeout(() => void sync(), 4000)
+    const interval = window.setInterval(() => void sync(), intervalMs)
+    const syncWhenVisible = () => {
+      if (!document.hidden) void sync()
+    }
+
+    document.addEventListener('visibilitychange', syncWhenVisible)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(firstSync)
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', syncWhenVisible)
+    }
+  }, [enabled, intervalMs, queryClient])
 }
 
 function tabClass(active: boolean, dragging = false) {

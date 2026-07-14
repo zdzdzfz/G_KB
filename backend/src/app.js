@@ -85,10 +85,15 @@ export async function createApp() {
 
   app.post('/api/mailboxes/sync-all', async (req, res) => {
     const mailboxes = await all('SELECT * FROM google_mailboxes WHERE user_id = ? AND status != ?', req.user.id, 'paused')
+    const automatic = Boolean(req.body?.automatic)
     const results = []
     for (const mailbox of mailboxes) {
       try {
-        await syncMailbox(mailbox.id, { manual: true })
+        if (automatic && recentlySynced(mailbox)) {
+          results.push({ mailbox_id: mailbox.id, status: 'skipped' })
+          continue
+        }
+        await syncMailbox(mailbox.id, { manual: !automatic })
         results.push({ mailbox_id: mailbox.id, status: 'synced' })
       } catch (error) {
         results.push({ mailbox_id: mailbox.id, status: 'failed', message: error.message })
@@ -343,6 +348,13 @@ function messageFilterSql(mailboxId, query) {
     sql: `SELECT * FROM email_messages WHERE ${where.join(' AND ')} ORDER BY received_at DESC, id DESC LIMIT 25`,
     params,
   }
+}
+
+function recentlySynced(mailbox) {
+  if (!mailbox.last_synced_at) return false
+
+  const seconds = (Date.now() - Date.parse(mailbox.last_synced_at)) / 1000
+  return seconds < config.google.syncCooldownSeconds
 }
 
 async function getSettings(userId) {
