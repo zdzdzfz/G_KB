@@ -1,7 +1,6 @@
 import axios from 'axios'
 import type {
   AppSettings,
-  AuthResult,
   DashboardStats,
   EmailMessage,
   GoogleMailbox,
@@ -10,7 +9,6 @@ import type {
   User,
 } from '../types'
 
-const tokenKey = 'mailauth_token'
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '/api' : 'http://localhost:8000/api')
 
 export const apiClient = axios.create({
@@ -20,30 +18,7 @@ export const apiClient = axios.create({
   },
 })
 
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem(tokenKey)
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-
-  return config
-})
-
-export const tokenStorage = {
-  key: tokenKey,
-  get: () => localStorage.getItem(tokenKey),
-  set: (token: string) => localStorage.setItem(tokenKey, token),
-  clear: () => localStorage.removeItem(tokenKey),
-}
-
 export const api = {
-  async login(email: string, password: string) {
-    return (await apiClient.post<AuthResult>('/login', { email, password })).data
-  },
-  async logout() {
-    await apiClient.post('/logout')
-  },
   async me() {
     return (await apiClient.get<{ data: User }>('/me')).data.data
   },

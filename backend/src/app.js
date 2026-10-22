@@ -1,11 +1,10 @@
 import express from 'express'
 import cors from 'cors'
-import bcrypt from 'bcryptjs'
 import { config } from './config.js'
 import { all, get, migrate, nowIso, run } from './db.js'
 import { defaultSettings, mergeSettings } from './services/settings.js'
 import { authorizationUrl, exchangeCode, syncMailbox, upsertMailbox } from './services/google.js'
-import { hashToken, randomToken } from './services/crypto.js'
+import { randomToken } from './services/crypto.js'
 
 export async function createApp() {
   await migrate()
@@ -16,32 +15,10 @@ export async function createApp() {
 
   app.get('/up', (_, res) => res.status(200).send('<!DOCTYPE html><html><body>OK</body></html>'))
 
-  app.post('/api/login', async (req, res, next) => {
-    try {
-      const { email, password } = req.body || {}
-      const user = await get('SELECT * FROM users WHERE email = ?', String(email || '').toLowerCase())
-      if (!user || !(await bcrypt.compare(String(password || ''), user.password))) {
-        return res.status(422).json({ message: 'The provided credentials are incorrect.' })
-      }
-
-      const token = randomToken(40)
-      await run('INSERT INTO api_tokens (user_id, token_hash, created_at) VALUES (?, ?, ?)', user.id, hashToken(token), nowIso())
-
-      res.json({ token, user: userResource(user) })
-    } catch (error) {
-      next(error)
-    }
-  })
-
   app.get('/api/google/callback', googleCallback)
   app.get('/api/google/invitations/:token/redirect', invitationRedirect)
 
   app.use('/api', authenticate)
-
-  app.post('/api/logout', async (req, res) => {
-    await run('DELETE FROM api_tokens WHERE id = ?', req.tokenRecord.id)
-    res.json({ message: 'Logged out.' })
-  })
 
   app.get('/api/me', (req, res) => res.json({ data: userResource(req.user) }))
 
@@ -236,10 +213,10 @@ async function googleCallback(req, res, next) {
     const invitation = state.invitation_id ? await get('SELECT * FROM google_oauth_invitations WHERE id = ?', state.invitation_id) : null
     if (invitation) {
       if (invitation.used_at || Date.parse(invitation.expires_at) < Date.now()) {
-        return redirectFrontend(res, state.return_path || '/login', { gmail: 'invite_invalid', message: 'This Gmail connection link is invalid or expired.' })
+        return redirectFrontend(res, state.return_path || '/dashboard', { gmail: 'invite_invalid', message: 'This Gmail connection link is invalid or expired.' })
       }
       if (invitation.target_email && invitation.target_email.toLowerCase() !== profile.email.toLowerCase()) {
-        return redirectFrontend(res, state.return_path || '/login', { gmail: 'email_mismatch', message: 'This link is reserved for another Gmail address.' })
+        return redirectFrontend(res, state.return_path || '/dashboard', { gmail: 'email_mismatch', message: 'This link is reserved for another Gmail address.' })
       }
     }
 
@@ -259,24 +236,20 @@ async function googleCallback(req, res, next) {
 async function invitationRedirect(req, res) {
   const invitation = await get('SELECT * FROM google_oauth_invitations WHERE token = ?', req.params.token)
   if (!invitation || invitation.used_at || Date.parse(invitation.expires_at) < Date.now()) {
-    return redirectFrontend(res, '/login', { gmail: 'invite_invalid', message: 'This Gmail connection link is invalid or expired.' })
+    return redirectFrontend(res, '/dashboard', { gmail: 'invite_invalid', message: 'This Gmail connection link is invalid or expired.' })
   }
-  const state = await createOAuthState({ user_id: invitation.user_id, invitation_id: invitation.id, mailbox_id: null, return_path: '/login' })
+  const state = await createOAuthState({ user_id: invitation.user_id, invitation_id: invitation.id, mailbox_id: null, return_path: '/dashboard' })
   res.redirect(authorizationUrl(state))
 }
 
+// Login is disabled: every request runs as the dashboard owner (the configured admin, else the first user).
 async function authenticate(req, res, next) {
   try {
-    const header = req.headers.authorization || ''
-    const token = header.startsWith('Bearer ') ? header.slice(7) : ''
-    if (!token) return next(statusError(401, 'Unauthenticated.'))
-    const tokenRecord = await get('SELECT * FROM api_tokens WHERE token_hash = ?', hashToken(token))
-    if (!tokenRecord) return next(statusError(401, 'Unauthenticated.'))
-    const user = await get('SELECT * FROM users WHERE id = ?', tokenRecord.user_id)
-    if (!user) return next(statusError(401, 'Unauthenticated.'))
-    await run('UPDATE api_tokens SET last_used_at = ? WHERE id = ?', nowIso(), tokenRecord.id)
+    const user =
+      (config.admin.email && (await get('SELECT * FROM users WHERE email = ?', config.admin.email))) ||
+      (await get('SELECT * FROM users ORDER BY id LIMIT 1'))
+    if (!user) return next(statusError(500, 'No owner user configured. Set ADMIN_EMAIL and ADMIN_PASSWORD.'))
     req.user = user
-    req.tokenRecord = tokenRecord
     next()
   } catch (error) {
     next(error)

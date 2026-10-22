@@ -1,24 +1,16 @@
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BarChart3, LogOut, MailCheck, Settings } from 'lucide-react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { BarChart3, MailCheck, Settings } from 'lucide-react'
+import { NavLink } from 'react-router-dom'
 import { api } from '../api/client'
-import { useAuth } from '../auth/AuthContext'
 import { applyThemePreference } from '../theme'
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { logout } = useAuth()
-  const navigate = useNavigate()
   const settingsQuery = useQuery({ queryKey: ['settings'], queryFn: api.settings })
 
   useEffect(() => {
     return applyThemePreference(settingsQuery.data?.appearance.theme ?? 'light')
   }, [settingsQuery.data?.appearance.theme])
-
-  async function handleLogout() {
-    await logout()
-    navigate('/login', { replace: true })
-  }
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -37,15 +29,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <NavItem to="/dashboard" icon={<BarChart3 className="h-4 w-4" />} label="Dashboard" />
           <NavItem to="/settings" icon={<Settings className="h-4 w-4" />} label="Settings" />
         </nav>
-
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="m-2.5 inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:border-slate-300 hover:bg-slate-50 md:justify-start"
-        >
-          <LogOut className="h-4 w-4" />
-          <span className="hidden md:inline">Logout</span>
-        </button>
       </aside>
 
       <main className="min-h-screen pl-[72px] md:pl-60">
