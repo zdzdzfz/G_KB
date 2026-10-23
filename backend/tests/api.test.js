@@ -18,16 +18,21 @@ async function listen() {
   })
 }
 
-test('api works without login and generates invitation link', async () => {
+test('login and generate invitation link', async () => {
   const { server, baseUrl } = await listen()
   try {
-    const me = await fetch(`${baseUrl}/api/me`)
-    assert.equal(me.status, 200)
-    assert.equal((await me.json()).data.email, 'admin@mailauth.local')
+    const login = await fetch(`${baseUrl}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'admin@mailauth.local', password: 'password' }),
+    })
+    assert.equal(login.status, 200)
+    const auth = await login.json()
+    assert.ok(auth.token)
 
     const invite = await fetch(`${baseUrl}/api/google/invitations`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
       body: JSON.stringify({ target_email: 'client@gmail.com' }),
     })
     assert.equal(invite.status, 200)

@@ -1,10 +1,11 @@
-import { Copy } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { AuthBadge, PlacementBadge } from './Badges'
-import type { EmailMessage } from '../types'
+import clsx from 'clsx'
+import { Ban, Check, Copy, Globe, Inbox, Minus, Server, ShieldCheck, X } from 'lucide-react'
+import { formatDistanceToNowStrict } from 'date-fns'
+import type { AuthResultName, EmailMessage } from '../types'
 
 export function MessageCard({ message, onOpen }: { message: EmailMessage; onOpen: (message: EmailMessage) => void }) {
-  const received = message.received_at ? `${formatDistanceToNow(new Date(message.received_at), { addSuffix: true })}` : 'Unknown time'
+  const received = message.received_at ? formatDistanceToNowStrict(new Date(message.received_at), { addSuffix: true }) : ''
+  const senderName = message.sender_name || (message.sender_email ? 'Unknown' : 'Unknown sender')
 
   return (
     <article
@@ -16,50 +17,79 @@ export function MessageCard({ message, onOpen }: { message: EmailMessage; onOpen
           onOpen(message)
         }
       }}
-      className="flex min-h-[172px] w-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white p-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+      className="flex min-h-[200px] w-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white p-2 text-left shadow-sm transition hover:border-emerald-200 hover:shadow-md"
     >
-      <div className="mb-1.5 flex items-start justify-between gap-1.5">
-        <div className="flex min-w-0 flex-col items-start gap-1">
-          <PlacementBadge placement={message.placement} compact />
-          {message.placement !== 'spam' && message.gmail_category && (
-            <span className="max-w-full truncate rounded-md bg-indigo-50 px-1.5 py-0.5 text-[9px] font-medium leading-3 text-indigo-700 ring-1 ring-indigo-200">
-              {message.gmail_category}
-            </span>
-          )}
-        </div>
-        <span className="shrink-0 whitespace-nowrap pt-0.5 text-[9px] leading-3 text-slate-500">{received}</span>
+      <div className="mb-1.5 flex items-center justify-between gap-1.5">
+        <PlacementLabel message={message} />
+        <span className="shrink-0 whitespace-nowrap text-[11px] leading-4 text-slate-500">{received}</span>
       </div>
 
-      <p className="truncate text-[10px] font-semibold leading-4 text-slate-950">{message.sender_name || message.sender_email || 'Unknown sender'}</p>
-      <p className="mt-0.5 line-clamp-2 min-h-7 text-[9px] leading-[14px] text-slate-700">{message.subject || '(No subject)'}</p>
+      <p className="truncate text-[13px] font-semibold leading-5 text-slate-950">{senderName}</p>
+      {message.sender_email && <p className="truncate text-[11px] leading-4 text-slate-500">{message.sender_email}</p>}
 
-      <dl className="mt-2 space-y-0.5 rounded-md bg-slate-50 p-1.5 text-[9px] leading-3 text-slate-600 ring-1 ring-slate-200">
-        <MetaRow label="From" value={message.from_domain} copyLabel="Copy domain" />
-        <MetaRow label="IP" value={message.observed_sending_ip} copyLabel="Copy IP" />
-      </dl>
+      <p className="mt-1.5 truncate text-xs font-medium leading-4 text-slate-900" title={message.subject || undefined}>
+        {message.subject || '(No subject)'}
+      </p>
+      <p className="line-clamp-2 min-h-8 text-[11px] leading-4 text-slate-500" title={message.snippet || undefined}>
+        {decodeEntities(message.snippet) || 'No preview available'}
+      </p>
 
-      <div className="mt-auto flex flex-wrap items-start gap-1 pt-2">
-        <AuthBadge label="SPF" value={message.spf_result} showValue={false} />
-        <AuthBadge label="DKIM" value={message.dkim_result} showValue={false} />
-        <AuthBadge label="DMARC" value={message.dmarc_result} showValue={false} />
+      <div className="mt-auto pt-2">
+        <div className="flex items-center justify-between gap-1 border-t border-slate-100 pt-1.5 text-[11px] font-semibold text-slate-600">
+          <ShieldCheck className="h-3 w-3 shrink-0 text-slate-400" />
+          <AuthCheck label="SPF" value={message.spf_result} />
+          <AuthCheck label="DKIM" value={message.dkim_result} />
+          <AuthCheck label="DMARC" value={message.dmarc_result} />
+        </div>
+
+        <div className="mt-1.5 grid grid-cols-2 gap-1">
+          <CopyChip icon={<Server className="h-3 w-3" />} value={message.observed_sending_ip} label="Copy IP" />
+          <CopyChip icon={<Globe className="h-3 w-3" />} value={message.from_domain} label="Copy domain" />
+        </div>
       </div>
     </article>
   )
 }
 
-function MetaRow({ label, value, copyLabel }: { label: string; value: string | null; copyLabel: string }) {
+function PlacementLabel({ message }: { message: EmailMessage }) {
+  if (message.placement === 'spam') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md bg-red-600 px-1.5 py-0.5 text-[11px] font-semibold leading-4 text-white">
+        <Ban className="h-3 w-3" />
+        Spam
+      </span>
+    )
+  }
+
+  const label = message.gmail_category || (message.placement === 'inbox' ? 'Inbox' : 'Other')
+
   return (
-    <div className="grid grid-cols-[26px_minmax(0,1fr)_16px] items-center gap-1">
-      <dt className="text-slate-500">{label}</dt>
-      <dd className="truncate font-medium text-slate-700" title={value || undefined}>
-        {value || 'unknown'}
-      </dd>
-      <CopyButton value={value} label={copyLabel} />
-    </div>
+    <span
+      className={clsx(
+        'inline-flex max-w-[70%] items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[11px] font-semibold leading-4 text-white',
+        message.placement === 'inbox' ? 'bg-emerald-600' : 'bg-slate-500',
+      )}
+    >
+      <Inbox className="h-3 w-3 shrink-0" />
+      {label}
+    </span>
   )
 }
 
-function CopyButton({ value, label }: { value: string | null; label: string }) {
+function AuthCheck({ label, value }: { label: string; value: AuthResultName }) {
+  const passed = value === 'pass'
+  const failed = value === 'fail' || value === 'softfail' || value === 'permerror'
+  const Icon = passed ? Check : failed ? X : Minus
+
+  return (
+    <span className="inline-flex items-center gap-0.5" title={`${label}: ${value}`}>
+      {label}
+      <Icon className={clsx('h-3 w-3', passed ? 'text-emerald-600' : failed ? 'text-red-600' : 'text-slate-400')} strokeWidth={3} />
+    </span>
+  )
+}
+
+function CopyChip({ icon, value, label }: { icon: React.ReactNode; value: string | null; label: string }) {
   async function copy(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation()
 
@@ -71,12 +101,22 @@ function CopyButton({ value, label }: { value: string | null; label: string }) {
   return (
     <button
       type="button"
-      title={label}
+      title={value ? `${label}: ${value}` : label}
       onClick={copy}
       disabled={!value}
-      className="inline-flex h-4 w-4 items-center justify-center rounded text-slate-400 hover:bg-white hover:text-indigo-600 disabled:opacity-30"
+      className="flex h-6 min-w-0 items-center gap-1 rounded-md bg-slate-50 px-1.5 text-[11px] font-medium leading-4 text-slate-700 ring-1 ring-slate-200 hover:bg-white hover:text-emerald-700 disabled:opacity-50"
     >
-      <Copy className="h-3 w-3" />
+      <span className="shrink-0 text-slate-400">{icon}</span>
+      <span className="min-w-0 flex-1 truncate text-left text-[11px] leading-4">{value || 'unknown'}</span>
+      <Copy className="h-3 w-3 shrink-0 text-slate-400" />
     </button>
   )
+}
+
+// Gmail snippets arrive HTML-escaped (&#39;, &amp;, ...).
+function decodeEntities(text: string | null) {
+  if (!text) return ''
+  const textarea = document.createElement('textarea')
+  textarea.innerHTML = text
+  return textarea.value
 }

@@ -202,11 +202,11 @@ export function MailboxSection({
         <div ref={gridRef} style={gridStyle} className="grid gap-2 px-7 md:px-8">
           {messagesQuery.isLoading &&
             Array.from({ length: cardsPerPage }).map((_, index) => (
-              <div key={index} className="min-h-[172px] animate-pulse rounded-lg border border-slate-200 bg-white shadow-sm" />
+              <div key={index} className="min-h-[200px] animate-pulse rounded-lg border border-slate-200 bg-white shadow-sm" />
             ))}
           {!messagesQuery.isLoading && pageMessages.map((message) => <MessageCard key={message.id} message={message} onOpen={onOpenMessage} />)}
           {!messagesQuery.isLoading && pageMessages.length === 0 && (
-            <div className="col-span-full grid min-h-[172px] place-items-center rounded-lg border border-slate-200 bg-white text-sm text-slate-500 shadow-sm">
+            <div className="col-span-full grid min-h-[200px] place-items-center rounded-lg border border-slate-200 bg-white text-sm text-slate-500 shadow-sm">
               No cached messages
             </div>
           )}
@@ -248,7 +248,7 @@ function useCardsPerPage() {
   })
 
   useEffect(() => {
-    const minCardWidth = 170
+    const minCardWidth = 240
     const gap = 8
 
     const update = () => {

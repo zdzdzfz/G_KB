@@ -28,11 +28,14 @@ body {
   background: #020617;
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+/* Layered so Tailwind text-* utilities on controls still win. */
+@layer base {
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
 }
 
 button {

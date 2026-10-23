@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 import { Copy, Link, RefreshCcw, X } from 'lucide-react'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -34,7 +35,8 @@ export function DashboardPage() {
   const [mailboxOrder, setMailboxOrder] = useState<number[]>(readStoredMailboxOrder)
   const debouncedFilters = useDebouncedValue(filters, 300)
 
-  const mailboxesQuery = useQuery({ queryKey: ['mailboxes'], queryFn: api.mailboxes })
+  // Keep polling so the dashboard recovers on its own after a failed load or a backend restart.
+  const mailboxesQuery = useQuery({ queryKey: ['mailboxes'], queryFn: api.mailboxes, refetchInterval: 5_000 })
   const statsQuery = useQuery({ queryKey: ['dashboard', 'stats'], queryFn: api.stats })
   const topIpsQuery = useQuery({ queryKey: ['dashboard', 'top-sending-ips'], queryFn: api.topSendingIps })
   const settingsQuery = useQuery({ queryKey: ['settings'], queryFn: api.settings })
@@ -115,6 +117,13 @@ export function DashboardPage() {
     setDraggingMailboxId(null)
   }
 
+  async function copyMailboxEmails() {
+    const emails = orderedMailboxes.map((mailbox) => mailbox.email)
+    if (emails.length > 0) {
+      await navigator.clipboard.writeText(`${emails.join(';')};`)
+    }
+  }
+
   async function copyAllValues(field: CopyField) {
     const messageGroups = await Promise.all(
       orderedMailboxes.map((mailbox) =>
@@ -127,7 +136,7 @@ export function DashboardPage() {
     const values = collectMessageValues(messageGroups.flat(), field)
 
     if (values.length > 0) {
-      await navigator.clipboard.writeText(values.join('\n'))
+      await navigator.clipboard.writeText(values.join(';'))
     }
   }
 
@@ -208,10 +217,14 @@ export function DashboardPage() {
 
       <div className="mb-3 flex justify-end">
         <div className="inline-flex flex-wrap items-center gap-0.5 rounded-lg border border-emerald-100 bg-emerald-50/70 p-0.5 shadow-sm">
-          <span className="px-1 text-[9px] font-semibold uppercase tracking-normal text-emerald-700">All</span>
+          <span className="px-1 text-[11px] font-semibold uppercase tracking-normal text-emerald-700">All</span>
           <TextButton variant="toolbarPrimary" title="Refresh all mailboxes" onClick={() => syncAllMutation.mutate({ automatic: false })} disabled={syncAllMutation.isPending || orderedMailboxes.length === 0}>
             <RefreshCcw className="h-3 w-3" />
             Refresh
+          </TextButton>
+          <TextButton variant="toolbar" title="Copy all mailbox emails" onClick={copyMailboxEmails} disabled={orderedMailboxes.length === 0}>
+            <Copy className="h-3 w-3" />
+            Emails
           </TextButton>
           <TextButton variant="toolbar" title="Copy all domains" onClick={() => copyAllValues('domain')} disabled={orderedMailboxes.length === 0}>
             <Copy className="h-3 w-3" />
@@ -304,7 +317,11 @@ function InviteLinkModal({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {inviteMutation.isError && <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">Could not generate the link.</p>}
+        {inviteMutation.isError && (
+          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            Could not generate the link. {describeError(inviteMutation.error)}
+          </p>
+        )}
       </section>
     </div>
   )
@@ -367,6 +384,13 @@ function useDashboardAutoSync({ enabled, intervalMs, queryClient }: { enabled: b
       document.removeEventListener('visibilitychange', syncWhenVisible)
     }
   }, [enabled, intervalMs, queryClient])
+}
+
+function describeError(error: unknown) {
+  if (!isAxiosError(error)) return ''
+  if (!error.response) return `API not reachable at ${error.config?.baseURL ?? 'the API URL'}.`
+  const message = (error.response.data as { message?: string } | undefined)?.message
+  return `Server returned ${error.response.status}${message ? `: ${message}` : ''}.`
 }
 
 function tabClass(active: boolean, dragging = false) {

@@ -25,7 +25,7 @@ export function AuthBadge({ label, value, showValue = true }: { label: string; v
     <span
       className={clsx(
         'inline-flex items-center rounded-md font-semibold uppercase ring-1',
-        showValue ? 'px-2 py-1 text-[11px]' : 'px-1.5 py-0.5 text-[9px]',
+        showValue ? 'px-2 py-1 text-[11px]' : 'px-1.5 py-0.5 text-[11px]',
         authColors[value],
       )}
     >
@@ -50,7 +50,7 @@ export function PlacementBadge({ placement, compact = false }: { placement: 'inb
   }[placement]
 
   return (
-    <span className={clsx('inline-flex items-center rounded-md font-semibold capitalize ring-1', compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-xs', classes)}>
+    <span className={clsx('inline-flex items-center rounded-md font-semibold capitalize ring-1', compact ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-1 text-xs', classes)}>
       {placement}
     </span>
   )
