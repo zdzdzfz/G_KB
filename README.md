@@ -58,7 +58,7 @@ Frontend `.env`:
 ```env
 VITE_API_URL=http://localhost:8000/api
 ```
-
+.
 On Vercel, the frontend automatically uses `/api` when `VITE_API_URL` is not set.
 
 ## Supabase + Vercel
